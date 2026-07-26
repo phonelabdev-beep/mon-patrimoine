@@ -6,7 +6,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/patrimoine-phones/',
+  base: '/mon-patrimoine/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -22,14 +22,14 @@ export default defineConfig({
         enabled: true,
       },
       manifest: {
-        id: '/patrimoine-phones/',
+        id: '/mon-patrimoine/',
         name: 'Patrimoine Phones',
         short_name: 'Patrimoine',
         description:
           "Suivi du patrimoine, des bénéfices et du stock pour une activité de revente et réparation de téléphones.",
         lang: 'fr',
-        start_url: '/patrimoine-phones/',
-        scope: '/patrimoine-phones/',
+        start_url: '/mon-patrimoine/',
+        scope: '/mon-patrimoine/',
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#09090b',
