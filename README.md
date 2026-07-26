@@ -36,3 +36,7 @@ Settings → Pages du dépôt). Le `base` de `vite.config.ts` est fixé à
 — à adapter si le dépôt est renommé.
 
 Application déployée : https://phonelabdev-beep.github.io/mon-patrimoine/
+
+Note : ce dossier (`patrimoine-phones` sur le Bureau) est la copie de travail locale.
+Le code poussé sur GitHub vit dans la copie propre `site-a-publier`, à synchroniser
+manuellement si l'un des deux dossiers est modifié.

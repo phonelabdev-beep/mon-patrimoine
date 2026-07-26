@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+﻿import { useMemo, useState } from 'react'
 import { useAppStore } from '@/store/useAppStore'
 import { resultatPeriode } from '@/lib/ledger/bilan'
 import { patrimoine, valeurLiquidation } from '@/lib/ledger/patrimoine'
@@ -34,7 +34,7 @@ export default function Bilan() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Bilan</h1>
 
       <div className="mb-4 flex gap-2">
@@ -51,25 +51,25 @@ export default function Bilan() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Revente</p>
           <p className={`text-lg font-semibold ${resultat.revente >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             <MoneyText cents={resultat.revente} />
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Réparations</p>
           <p className={`text-lg font-semibold ${resultat.reparation >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             <MoneyText cents={resultat.reparation} />
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Dépenses</p>
           <p className="text-lg font-semibold text-red-400">
             <MoneyText cents={resultat.depenses} />
           </p>
         </div>
-        <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+        <div className="rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
           <p className="text-xs uppercase tracking-wide text-zinc-500">Bénéfice net</p>
           <p className={`text-lg font-semibold ${beneficeTotal >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             <MoneyText cents={beneficeTotal} />
@@ -78,7 +78,7 @@ export default function Bilan() {
       </div>
 
       <h2 className="mb-2 mt-8 text-xs font-medium uppercase tracking-wide text-zinc-500">Simulation de liquidation totale</h2>
-      <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
+      <div className="rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-4">
         <p className="text-3xl font-semibold text-zinc-50">
           <MoneyText cents={valeurLiquidation(movements, phones)} />
         </p>

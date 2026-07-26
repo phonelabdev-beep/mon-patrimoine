@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import type { Movement } from '@/types'
-import { achatPieceMovement, utilisationPieceMovement, ajustementMovement } from '../movements'
+import {
+  achatPieceMovement,
+  utilisationPieceMovement,
+  ajustementMovement,
+  annulerContributionPieceMovement,
+  achatTelephoneMovement,
+  correctionPrixAchatMovement,
+} from '../movements'
 import { stockPart, coutUnitaireMoyen, valeurTotaleStockPieces, sortiesPart, sortedByDate } from '../stock'
+import { soldeTotalCash } from '../balances'
+import { valeurStockTelephones, patrimoine } from '../patrimoine'
 
 const ECRAN = 'ecran'
 
@@ -100,5 +109,71 @@ describe('coût moyen pondéré des pièces', () => {
     ]
     const sorties = sortiesPart(movements, ECRAN)
     expect(sorties.map((s) => s.refId)).toEqual(['phone-1', 'repair-2'])
+  })
+
+  it("annulerContributionPieceMovement n'annule qu'UNE pièce dans un achat groupé, laissant l'autre intacte", () => {
+    const BATTERIE = 'batterie'
+    const achatGroupe = achatPieceMovement({
+      date: '2026-01-01',
+      compteId: 'main',
+      libelle: 'commande groupée',
+      parts: [
+        { partId: ECRAN, qte: 3, coutUnitaire: 1500 },
+        { partId: BATTERIE, qte: 2, coutUnitaire: 800 },
+      ],
+    })
+    const annulationEcran = annulerContributionPieceMovement({
+      date: '2026-01-02',
+      libelle: 'Suppression pièce : Écran',
+      original: achatGroupe,
+      partId: ECRAN,
+    })
+    const movements = [achatGroupe, annulationEcran]
+    expect(stockPart(movements, ECRAN)).toEqual({ quantite: 0, valeurStock: 0 })
+    expect(stockPart(movements, BATTERIE)).toEqual({ quantite: 2, valeurStock: 1600 })
+    // Le cash n'a été recrédité que de la part de l'écran (3*1500=4500), pas de la commande entière.
+    expect(soldeTotalCash(movements)).toBe(-(3 * 1500 + 2 * 800) + 3 * 1500)
+  })
+
+  it("annulerContributionPieceMovement restitue le stock quand la pièce provient d'une utilisation_piece", () => {
+    const achat = achatPieceMovement({ date: '2026-01-01', compteId: 'main', libelle: 'lot', parts: [{ partId: ECRAN, qte: 5, coutUnitaire: 1500 }] })
+    const utilisation = utilisationPieceMovement({
+      date: '2026-01-02',
+      partId: ECRAN,
+      qte: 1,
+      coutUnitaireFige: 1500,
+      destination: 'revente',
+      refId: 'phone-x',
+      libelle: 'pose',
+    })
+    const annulation = annulerContributionPieceMovement({
+      date: '2026-01-03',
+      libelle: 'Suppression téléphone',
+      original: utilisation,
+      partId: ECRAN,
+    })
+    const state = stockPart([achat, utilisation, annulation], ECRAN)
+    expect(state.quantite).toBe(5)
+    expect(state.valeurStock).toBe(5 * 1500)
+  })
+})
+
+describe('correctionPrixAchatMovement', () => {
+  it("corrige le prix d'achat sans jamais modifier le mouvement achat_telephone d'origine (immuable)", () => {
+    const achat = achatTelephoneMovement({ date: '2026-01-01', compteId: 'main', montant: 8000, libelle: 'Achat', refId: 'phone-1' })
+    const montantOriginal = achat.lignes.find((l) => l.compte === 'stock:telephones')?.montant
+    const correction = correctionPrixAchatMovement({
+      date: '2026-01-05',
+      compteId: 'main',
+      delta: 1000, // corrige 80 -> 90
+      libelle: "Correction prix d'achat",
+      refId: 'phone-1',
+    })
+    // Le mouvement d'origine reste inchangé.
+    expect(achat.lignes.find((l) => l.compte === 'stock:telephones')?.montant).toBe(montantOriginal)
+    const movements = [achat, correction]
+    expect(valeurStockTelephones(movements)).toBe(9000)
+    expect(soldeTotalCash(movements)).toBe(-9000)
+    expect(patrimoine(movements)).toBe(0) // simple conversion cash -> stock, patrimoine inchangé
   })
 })

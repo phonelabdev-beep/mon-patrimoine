@@ -26,7 +26,7 @@ export default function Depenses() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Dépenses</h1>
         <Link to="/nouveau/depense" className="flex min-h-[44px] items-center rounded-lg bg-indigo-500 px-3 text-sm font-medium text-white">
@@ -47,7 +47,7 @@ export default function Depenses() {
               </div>
               <ul className="flex flex-col gap-2">
                 {list.map((e) => (
-                  <li key={e.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm">
+                  <li key={e.id} className="flex items-center justify-between rounded-lg border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3 text-sm">
                     <div>
                       <p className="font-medium">{e.motif}</p>
                       <p className="text-zinc-400">

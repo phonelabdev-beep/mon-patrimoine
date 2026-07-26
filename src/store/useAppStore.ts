@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type {
   Movement,
   Phone,
+  PhoneStatut,
   Part,
   Repair,
   Expense,
@@ -12,6 +13,7 @@ import type {
 } from '@/types'
 import { newId } from '@/lib/id'
 import { idbStorage } from '@/lib/idb'
+import { todayISO } from '@/lib/dates'
 import { stockPart, coutUnitaireMoyen } from '@/lib/ledger/stock'
 import {
   achatTelephoneMovement,
@@ -22,6 +24,8 @@ import {
   depenseMovement,
   transfertCashMovement,
   soldeInitialMovement,
+  correctionPrixAchatMovement,
+  annulerContributionPieceMovement,
   ajustementMovement,
 } from '@/lib/ledger/movements'
 
@@ -35,7 +39,29 @@ type AchatTelephoneInput = {
   prixVenteVise: number
   compteId: string
   notes?: string
+  valeurPieceRecuperable?: number
 }
+
+type ModifierTelephoneInput = Partial<{
+  modele: string
+  couleur: string
+  stockage: string
+  dateAchat: string
+  prixAchat: number
+  reparationEstimee: number
+  prixVenteVise: number
+  statut: PhoneStatut
+  notes: string
+  valeurPieceRecuperable: number
+}>
+
+type ModifierPieceInput = Partial<{
+  nom: string
+  categorie: string
+  compatibilite: string[]
+  fournisseur: string
+  seuilAlerte: number
+}>
 
 type AchatPieceLigneInput = {
   partId?: string
@@ -139,6 +165,11 @@ export type AppState = {
   ajouterSoldeInitial: (input: AjouterSoldeInitialInput) => void
   ajusterMouvement: (movementId: string, libelle: string, date: string) => void
   ajouterCompteCash: (input: AjouterCompteCashInput) => CashAccount
+  modifierTelephone: (phoneId: string, patch: ModifierTelephoneInput) => void
+  supprimerTelephone: (phoneId: string) => void
+  modifierPiece: (partId: string, patch: ModifierPieceInput) => void
+  supprimerPiece: (partId: string) => void
+  supprimerReparation: (repairId: string) => void
   remplacerToutesLesDonnees: (data: PersistedData) => void
 }
 
@@ -167,6 +198,7 @@ export const useAppStore = create<AppState>()(
           prixVenteVise: input.prixVenteVise,
           statut: 'en_stock',
           notes: input.notes,
+          valeurPieceRecuperable: input.valeurPieceRecuperable,
         }
         const movement = achatTelephoneMovement({
           date: input.dateAchat,
@@ -328,7 +360,7 @@ export const useAppStore = create<AppState>()(
       },
 
       ajouterSoldeInitial: (input) => {
-        if (input.montant <= 0) throw new Error('Le montant doit être positif.')
+        if (input.montant === 0) throw new Error('Le montant ne peut pas être nul.')
         const movement = soldeInitialMovement(input)
         set((state) => ({ movements: [...state.movements, movement] }))
       },
@@ -348,6 +380,110 @@ export const useAppStore = create<AppState>()(
         const account: CashAccount = { id: newId(), nom: input.nom, type: input.type }
         set((state) => ({ cashAccounts: [...state.cashAccounts, account] }))
         return account
+      },
+
+      modifierTelephone: (phoneId, patch) => {
+        const { phones, movements } = get()
+        const phone = phones.find((p) => p.id === phoneId)
+        if (!phone) throw new Error('Téléphone introuvable.')
+
+        if (patch.statut !== undefined && patch.statut !== phone.statut) {
+          if (phone.statut === 'vendu' || patch.statut === 'vendu') {
+            throw new Error('Utilise "Vendre" pour marquer un téléphone comme vendu — le statut ne se change pas ici.')
+          }
+        }
+
+        const nouveauxMouvements: Movement[] = []
+        if (patch.prixAchat !== undefined && patch.prixAchat !== phone.prixAchat) {
+          if (phone.statut === 'vendu') {
+            throw new Error("Le prix d'achat ne peut plus être modifié une fois le téléphone vendu.")
+          }
+          const achatOriginal = movements.find((m) => m.type === 'achat_telephone' && m.refId === phoneId)
+          if (!achatOriginal) throw new Error("Mouvement d'achat introuvable pour ce téléphone.")
+          const ligneCash = achatOriginal.lignes.find((l) => l.compte.startsWith('cash:'))
+          if (!ligneCash) throw new Error("Compte d'achat introuvable pour ce téléphone.")
+          const compteId = ligneCash.compte.slice('cash:'.length)
+          nouveauxMouvements.push(
+            correctionPrixAchatMovement({
+              date: todayISO(),
+              compteId,
+              delta: patch.prixAchat - phone.prixAchat,
+              libelle: `Correction prix d'achat : ${phone.modele}`,
+              refId: phoneId,
+            }),
+          )
+        }
+
+        set((state) => ({
+          phones: state.phones.map((p) => (p.id === phoneId ? { ...p, ...patch } : p)),
+          movements: [...state.movements, ...nouveauxMouvements],
+        }))
+      },
+
+      supprimerTelephone: (phoneId) => {
+        const { phones, movements } = get()
+        if (!phones.some((p) => p.id === phoneId)) throw new Error('Téléphone introuvable.')
+        const dejaAnnules = new Set(
+          movements.filter((m) => m.type === 'ajustement' && m.refId).map((m) => m.refId as string),
+        )
+        const aAnnuler = movements.filter((m) => m.refId === phoneId && m.type !== 'ajustement' && !dejaAnnules.has(m.id))
+        const annulations = aAnnuler.map((m) =>
+          ajustementMovement({ date: todayISO(), libelle: 'Suppression téléphone', original: m }),
+        )
+        set((state) => ({
+          phones: state.phones.filter((p) => p.id !== phoneId),
+          movements: [...state.movements, ...annulations],
+        }))
+      },
+
+      modifierPiece: (partId, patch) => {
+        if (!get().parts.some((p) => p.id === partId)) throw new Error('Pièce introuvable.')
+        set((state) => ({ parts: state.parts.map((p) => (p.id === partId ? { ...p, ...patch } : p)) }))
+      },
+
+      supprimerPiece: (partId) => {
+        const { movements, parts } = get()
+        const part = parts.find((p) => p.id === partId)
+        if (!part) throw new Error('Pièce introuvable.')
+        const dejaAnnulesPourCettePiece = new Set(
+          movements
+            .filter((m) => m.type === 'ajustement' && m.refId && m.meta?.parts?.some((p) => p.partId === partId))
+            .map((m) => m.refId as string),
+        )
+        const aAnnuler = movements.filter(
+          (m) =>
+            (m.type === 'achat_piece' || m.type === 'utilisation_piece') &&
+            m.meta?.parts?.some((p) => p.partId === partId) &&
+            !dejaAnnulesPourCettePiece.has(m.id),
+        )
+        const annulations = aAnnuler.map((m) =>
+          annulerContributionPieceMovement({
+            date: todayISO(),
+            libelle: `Suppression pièce : ${part.nom}`,
+            original: m,
+            partId,
+          }),
+        )
+        set((state) => ({
+          parts: state.parts.filter((p) => p.id !== partId),
+          movements: [...state.movements, ...annulations],
+        }))
+      },
+
+      supprimerReparation: (repairId) => {
+        const { movements, repairs } = get()
+        if (!repairs.some((r) => r.id === repairId)) throw new Error('Réparation introuvable.')
+        const dejaAnnules = new Set(
+          movements.filter((m) => m.type === 'ajustement' && m.refId).map((m) => m.refId as string),
+        )
+        const aAnnuler = movements.filter((m) => m.refId === repairId && m.type !== 'ajustement' && !dejaAnnules.has(m.id))
+        const annulations = aAnnuler.map((m) =>
+          ajustementMovement({ date: todayISO(), libelle: 'Suppression réparation', original: m }),
+        )
+        set((state) => ({
+          repairs: state.repairs.filter((r) => r.id !== repairId),
+          movements: [...state.movements, ...annulations],
+        }))
       },
 
       remplacerToutesLesDonnees: (data) => {

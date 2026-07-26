@@ -87,7 +87,7 @@ export default function Reglages() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Réglages</h1>
 
       <section className="mb-8">
@@ -97,7 +97,7 @@ export default function Reglages() {
         ) : (
           <ul className="mb-3 flex flex-col gap-2">
             {cashAccounts.map((c) => (
-              <li key={c.id} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm">
+              <li key={c.id} className="flex items-center justify-between rounded-lg border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3 text-sm">
                 <span>{c.nom}</span>
                 <span className="text-zinc-400">{TYPE_LABELS[c.type]}</span>
               </li>

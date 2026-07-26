@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import type { Movement, Phone } from '@/types'
 import { utilisationPieceMovement } from '../movements'
-import { margePrevisionnelle, ecartEstimation, beneficeReel, piecesConsommeesPhone, piecesMonteesSurPhone } from '../phones'
+import { margePrevisionnelle, ecartEstimation, beneficeReel, piecesConsommeesPhone, piecesMonteesSurPhone, coutEffectif } from '../phones'
 
 function makePhone(overrides: Partial<Phone> = {}): Phone {
   return {
@@ -55,5 +55,22 @@ describe('calculs liés aux téléphones', () => {
   it('beneficeReel = prixVente - prixAchat une fois vendu (ne soustrait pas les pièces)', () => {
     const phone = makePhone({ statut: 'vendu', prixVente: 13000, prixAchat: 8000 })
     expect(beneficeReel(phone)).toBe(5000)
+  })
+
+  it('coutEffectif = prixAchat - valeurPieceRecuperable (0 si absent)', () => {
+    expect(coutEffectif(makePhone({ prixAchat: 8000 }))).toBe(8000)
+    expect(coutEffectif(makePhone({ prixAchat: 8000, valeurPieceRecuperable: 1500 }))).toBe(6500)
+  })
+
+  it('margePrevisionnelle utilise le coût effectif, pas le prix d’achat brut', () => {
+    const phone = makePhone({ prixAchat: 8000, valeurPieceRecuperable: 1500, prixVenteVise: 13000, reparationEstimee: 1000 })
+    // 13000 - (8000-1500) - 1000 = 5500
+    expect(margePrevisionnelle(phone)).toBe(5500)
+  })
+
+  it('beneficeReel utilise aussi le coût effectif une fois vendu', () => {
+    const phone = makePhone({ prixAchat: 8000, valeurPieceRecuperable: 1500, statut: 'vendu', prixVente: 13000 })
+    // 13000 - (8000-1500) = 6500
+    expect(beneficeReel(phone)).toBe(6500)
   })
 })

@@ -1,10 +1,10 @@
-﻿import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { todayISO } from '@/lib/dates'
 import { parseEURInputToCents } from '@/lib/money'
+import { resolveCompteParDefautId } from '@/lib/defaultAccount'
 import Field, { inputClass } from '@/components/ui/Field'
-import CompteSelect from '@/components/ui/CompteSelect'
 
 export default function AchatTelephoneForm() {
   const navigate = useNavigate()
@@ -17,7 +17,7 @@ export default function AchatTelephoneForm() {
   const [prixAchat, setPrixAchat] = useState('')
   const [reparationEstimee, setReparationEstimee] = useState('')
   const [prixVenteVise, setPrixVenteVise] = useState('')
-  const [compteId, setCompteId] = useState('')
+  const [valeurPieceRecuperable, setValeurPieceRecuperable] = useState('')
   const [notes, setNotes] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -28,11 +28,12 @@ export default function AchatTelephoneForm() {
     const prixAchatCents = parseEURInputToCents(prixAchat)
     const reparationEstimeeCents = parseEURInputToCents(reparationEstimee || '0') ?? 0
     const prixVenteViseCents = parseEURInputToCents(prixVenteVise)
+    const valeurRecuperableCents = valeurPieceRecuperable.trim() === '' ? 0 : parseEURInputToCents(valeurPieceRecuperable)
 
     if (!modele.trim() || !couleur.trim()) return setErreur('Modèle et couleur sont obligatoires.')
     if (prixAchatCents == null) return setErreur('Prix d’achat invalide.')
     if (prixVenteViseCents == null) return setErreur('Prix de vente visé invalide.')
-    if (!compteId) return setErreur('Choisis un compte de paiement.')
+    if (valeurRecuperableCents == null) return setErreur('Valeur pièce récupérable invalide.')
 
     try {
       achatTelephone({
@@ -43,7 +44,8 @@ export default function AchatTelephoneForm() {
         prixAchat: prixAchatCents,
         reparationEstimee: reparationEstimeeCents,
         prixVenteVise: prixVenteViseCents,
-        compteId,
+        valeurPieceRecuperable: valeurRecuperableCents,
+        compteId: resolveCompteParDefautId(),
         notes: notes.trim() || undefined,
       })
       navigate('/telephones')
@@ -53,7 +55,7 @@ export default function AchatTelephoneForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Achat téléphone</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Modèle *">
@@ -71,13 +73,21 @@ export default function AchatTelephoneForm() {
         <Field label="Prix d'achat, tout compris (€) *">
           <input inputMode="decimal" className={inputClass} value={prixAchat} onChange={(e) => setPrixAchat(e.target.value)} placeholder="80" />
         </Field>
+        <Field label="Valeur pièce d'origine récupérable estimée (€)">
+          <input
+            inputMode="decimal"
+            className={inputClass}
+            value={valeurPieceRecuperable}
+            onChange={(e) => setValeurPieceRecuperable(e.target.value)}
+            placeholder="Ex : écran fissuré mais fonctionnel"
+          />
+        </Field>
         <Field label="Réparation estimée (€)">
           <input inputMode="decimal" className={inputClass} value={reparationEstimee} onChange={(e) => setReparationEstimee(e.target.value)} placeholder="0" />
         </Field>
         <Field label="Prix de vente visé (€) *">
           <input inputMode="decimal" className={inputClass} value={prixVenteVise} onChange={(e) => setPrixVenteVise(e.target.value)} placeholder="130" />
         </Field>
-        <CompteSelect value={compteId} onChange={setCompteId} label="Payé depuis *" />
         <Field label="Notes">
           <textarea className={inputClass} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
         </Field>

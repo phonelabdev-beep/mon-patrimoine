@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
 import { todayISO } from '@/lib/dates'
 import { stockPart, coutUnitaireMoyen } from '@/lib/ledger/stock'
@@ -9,6 +9,8 @@ import MoneyText from '@/components/ui/MoneyText'
 
 export default function UtilisationPieceForm() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const preselection = location.state as { partId?: string } | null
   const parts = useAppStore((s) => s.parts)
   const phones = useAppStore((s) => s.phones)
   const movements = useAppStore((s) => s.movements)
@@ -17,7 +19,7 @@ export default function UtilisationPieceForm() {
   const phonesDisponibles = useMemo(() => phones.filter((p) => p.statut !== 'vendu'), [phones])
 
   const [date, setDate] = useState(todayISO())
-  const [partId, setPartId] = useState('')
+  const [partId, setPartId] = useState(preselection?.partId ?? '')
   const [phoneId, setPhoneId] = useState('')
   const [qte, setQte] = useState('1')
   const [erreur, setErreur] = useState<string | null>(null)
@@ -50,7 +52,7 @@ export default function UtilisationPieceForm() {
 
   if (parts.length === 0 || phonesDisponibles.length === 0) {
     return (
-      <div className="mx-auto max-w-md px-4 pt-6">
+      <div className="mx-auto max-w-md px-4">
         <h1 className="text-xl font-semibold">Utilisation pièce</h1>
         <EmptyState
           title="Rien à monter pour l'instant"
@@ -65,7 +67,7 @@ export default function UtilisationPieceForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Utilisation pièce</h1>
       <p className="mb-4 text-sm text-zinc-400">Pour un téléphone de ton propre stock. Pour une réparation client, utilise « Réparation client ».</p>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">

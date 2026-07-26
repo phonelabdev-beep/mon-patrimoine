@@ -1,25 +1,26 @@
-﻿import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, type FormEvent } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
 import { useAppStore } from '@/store/useAppStore'
 import { todayISO } from '@/lib/dates'
 import { parseEURInputToCents } from '@/lib/money'
+import { resolveCompteParDefautId } from '@/lib/defaultAccount'
 import Field, { inputClass } from '@/components/ui/Field'
-import CompteSelect from '@/components/ui/CompteSelect'
 
 type LignePiece = { partId: string; qte: string }
 
 export default function ReparationForm() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const preselection = location.state as { partId?: string } | null
   const parts = useAppStore((s) => s.parts)
   const creerReparation = useAppStore((s) => s.creerReparation)
 
   const [date, setDate] = useState(todayISO())
   const [appareil, setAppareil] = useState('')
   const [client, setClient] = useState('')
-  const [pieces, setPieces] = useState<LignePiece[]>([])
+  const [pieces, setPieces] = useState<LignePiece[]>(preselection?.partId ? [{ partId: preselection.partId, qte: '1' }] : [])
   const [prixFacture, setPrixFacture] = useState('')
-  const [compteEncaissement, setCompteEncaissement] = useState('')
   const [notes, setNotes] = useState('')
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -34,7 +35,6 @@ export default function ReparationForm() {
     const prixFactureCents = parseEURInputToCents(prixFacture)
     if (!appareil.trim()) return setErreur("L'appareil est obligatoire.")
     if (prixFactureCents == null) return setErreur('Prix facturé invalide.')
-    if (!compteEncaissement) return setErreur("Choisis un compte d'encaissement.")
 
     const piecesInput: { partId: string; qte: number }[] = []
     for (const p of pieces) {
@@ -51,7 +51,7 @@ export default function ReparationForm() {
         client: client.trim() || undefined,
         pieces: piecesInput,
         prixFacture: prixFactureCents,
-        compteEncaissement,
+        compteEncaissement: resolveCompteParDefautId(),
         notes: notes.trim() || undefined,
       })
       navigate('/reparations')
@@ -61,7 +61,7 @@ export default function ReparationForm() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Réparation client</h1>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Date *">
@@ -117,7 +117,6 @@ export default function ReparationForm() {
         <Field label="Prix facturé (€) *">
           <input inputMode="decimal" className={inputClass} value={prixFacture} onChange={(e) => setPrixFacture(e.target.value)} placeholder="40" />
         </Field>
-        <CompteSelect value={compteEncaissement} onChange={setCompteEncaissement} label="Encaissé sur *" />
         <Field label="Notes">
           <textarea className={inputClass} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
         </Field>

@@ -73,7 +73,7 @@ export default function Journal() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Journal</h1>
 
       <div className="mb-4 flex flex-col gap-2">
@@ -100,7 +100,7 @@ export default function Journal() {
           {filtres.map((m) => {
             const ref = lienRef(m)
             return (
-              <li key={m.id} className="rounded-xl border border-zinc-800 bg-zinc-900 p-3 text-sm">
+              <li key={m.id} className="rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{TYPE_LABELS[m.type]}</span>
                   <span className="text-zinc-400">{formatDateFR(m.date)}</span>

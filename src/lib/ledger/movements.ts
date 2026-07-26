@@ -184,6 +184,31 @@ export function soldeInitialMovement(input: {
   })
 }
 
+/**
+ * Correction du prix d'achat d'un téléphone NON encore vendu : ajuste cash et
+ * stock:telephones du delta (nouveau - ancien), sans jamais toucher au
+ * mouvement `achat_telephone` d'origine (immuable). Une fois le téléphone
+ * vendu, ce champ n'est plus modifiable (voir `store/useAppStore.ts`).
+ */
+export function correctionPrixAchatMovement(input: {
+  date: string
+  compteId: string
+  delta: number // nouveau prixAchat - ancien prixAchat
+  libelle: string
+  refId: string
+}): Movement {
+  return buildMovement({
+    date: input.date,
+    type: 'ajustement',
+    libelle: input.libelle,
+    refId: input.refId,
+    lignes: [
+      { compte: `cash:${input.compteId}`, montant: -input.delta },
+      { compte: 'stock:telephones', montant: input.delta },
+    ],
+  })
+}
+
 export function transfertCashMovement(input: {
   date: string
   compteSourceId: string
@@ -198,6 +223,40 @@ export function transfertCashMovement(input: {
     lignes: [
       { compte: `cash:${input.compteSourceId}`, montant: -input.montant },
       { compte: `cash:${input.compteDestId}`, montant: input.montant },
+    ],
+  })
+}
+
+/**
+ * Annule la contribution d'UNE SEULE pièce dans un mouvement qui peut en
+ * regrouper plusieurs (un `achat_piece` peut acheter 3 pièces différentes en
+ * une seule commande). Ne reverse que la part de ce mouvement concernant
+ * cette pièce ; les autres pièces du même mouvement restent intactes.
+ * Le sens (ajout ou retrait de stock à annuler) est déduit du signe de la
+ * ligne `stock:pieces` du mouvement d'origine, pas de son `type`.
+ */
+export function annulerContributionPieceMovement(input: {
+  date: string
+  libelle: string
+  original: Movement
+  partId: string
+}): Movement {
+  const partEntry = input.original.meta?.parts?.find((p) => p.partId === input.partId)
+  if (!partEntry) throw new Error("Cette pièce ne fait pas partie de ce mouvement.")
+  const ligneStockPieces = input.original.lignes.find((l) => l.compte === 'stock:pieces')
+  const autreLigne = input.original.lignes.find((l) => l.compte !== 'stock:pieces')
+  if (!ligneStockPieces || !autreLigne) throw new Error('Mouvement de pièce incomplet.')
+  const contribution = partEntry.qte * partEntry.coutUnitaire
+  const signeStock = ligneStockPieces.montant >= 0 ? 1 : -1
+  return buildMovement({
+    date: input.date,
+    type: 'ajustement',
+    libelle: input.libelle,
+    refId: input.original.id,
+    meta: { parts: [{ partId: input.partId, qte: partEntry.qte, coutUnitaire: partEntry.coutUnitaire }] },
+    lignes: [
+      { compte: 'stock:pieces', montant: -signeStock * contribution },
+      { compte: autreLigne.compte, montant: signeStock * contribution },
     ],
   })
 }

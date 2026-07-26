@@ -60,7 +60,7 @@ export default function Tresorerie() {
 
   if (cashAccounts.length === 0) {
     return (
-      <div className="mx-auto max-w-md px-4 pt-6">
+      <div className="mx-auto max-w-md px-4">
         <h1 className="mb-4 text-xl font-semibold">Trésorerie</h1>
         <EmptyState
           title="Aucun compte pour l'instant"
@@ -71,19 +71,19 @@ export default function Tresorerie() {
   }
 
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Trésorerie</h1>
 
       <ul className="mb-6 flex flex-col gap-2">
         {cashAccounts.map((c) => (
-          <li key={c.id} className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+          <li key={c.id} className="flex items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
             <span className="font-medium">{c.nom}</span>
             <MoneyText cents={soldes[c.id] ?? 0} className="font-medium" />
           </li>
         ))}
       </ul>
 
-      <div className="mb-6 flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+      <div className="mb-6 flex flex-col gap-2 rounded-lg border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
         <h2 className="text-sm font-medium text-zinc-400">Ajouter un solde (apport d'argent déjà possédé)</h2>
         <select className={inputClass} value={compteApportId} onChange={(e) => setCompteApportId(e.target.value)}>
           <option value="" disabled>
@@ -110,7 +110,7 @@ export default function Tresorerie() {
       </div>
 
       {cashAccounts.length >= 2 && (
-        <div className="mb-6 flex flex-col gap-2 rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+        <div className="mb-6 flex flex-col gap-2 rounded-lg border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3">
           <h2 className="text-sm font-medium text-zinc-400">Transférer entre mes comptes</h2>
           <select className={inputClass} value={compteSourceId} onChange={(e) => setCompteSourceId(e.target.value)}>
             <option value="" disabled>
@@ -148,7 +148,7 @@ export default function Tresorerie() {
           {mouvementsCash.map((m) => {
             const lignesCash = m.lignes.filter((l) => l.compte.startsWith('cash:'))
             return (
-              <li key={m.id} className="rounded-lg border border-zinc-800 bg-zinc-900 p-3 text-sm">
+              <li key={m.id} className="rounded-lg border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span>{m.libelle}</span>
                   <span className="text-zinc-400">{formatDateFR(m.date)}</span>

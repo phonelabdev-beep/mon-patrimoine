@@ -62,6 +62,10 @@ export type Phone = {
   dateVente?: string
   prixVente?: number
   notes?: string
+  // Valeur estimée d'une pièce d'origine récupérable (ex: écran fissuré mais
+  // fonctionnel). Purement déductif dans les calculs de marge — jamais un
+  // mouvement, jamais une extraction réelle de stock de pièces.
+  valeurPieceRecuperable?: number
 }
 
 export type Part = {

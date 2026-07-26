@@ -1,9 +1,10 @@
 ﻿import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '@/store/useAppStore'
-import type { PhoneStatut } from '@/types'
+import type { Phone, PhoneStatut } from '@/types'
 import MoneyText from '@/components/ui/MoneyText'
 import EmptyState from '@/components/ui/EmptyState'
+import ActionSheet from '@/components/ui/ActionSheet'
 
 const STATUTS: { value: PhoneStatut | 'tous'; label: string }[] = [
   { value: 'tous', label: 'Tous' },
@@ -28,16 +29,27 @@ const BADGE_LABELS: Record<PhoneStatut, string> = {
 }
 
 export default function Telephones() {
+  const navigate = useNavigate()
   const phones = useAppStore((s) => s.phones)
+  const supprimerTelephone = useAppStore((s) => s.supprimerTelephone)
   const [filtre, setFiltre] = useState<PhoneStatut | 'tous'>('tous')
+  const [phoneActif, setPhoneActif] = useState<Phone | null>(null)
 
   const filtres = useMemo(
     () => (filtre === 'tous' ? phones : phones.filter((p) => p.statut === filtre)),
     [phones, filtre],
   )
 
+  function handleSupprimer(phone: Phone) {
+    const confirme = window.confirm(
+      `Supprimer ${phone.modele} ? Tous les mouvements associés seront annulés proprement (rien ne reste orphelin dans le journal). Action irréversible.`,
+    )
+    if (!confirme) return
+    supprimerTelephone(phone.id)
+  }
+
   return (
-    <div className="mx-auto max-w-md px-4 pb-10 pt-6">
+    <div className="mx-auto max-w-md px-4 pb-10">
       <h1 className="mb-4 text-xl font-semibold">Téléphones</h1>
 
       <div className="mb-4 flex gap-2 overflow-x-auto">
@@ -61,9 +73,10 @@ export default function Telephones() {
         <ul className="flex flex-col gap-2">
           {filtres.map((p) => (
             <li key={p.id}>
-              <Link
-                to={`/telephones/${p.id}`}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900 p-3"
+              <button
+                type="button"
+                onClick={() => setPhoneActif(p)}
+                className="flex w-full items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900 shadow-md shadow-black/20 ring-1 ring-white/[0.03] p-3 text-left"
               >
                 <div>
                   <p className="font-medium">{p.modele}</p>
@@ -78,11 +91,28 @@ export default function Telephones() {
                     <MoneyText cents={p.statut === 'vendu' && p.prixVente != null ? p.prixVente : p.prixVenteVise} />
                   </p>
                 </div>
-              </Link>
+              </button>
             </li>
           ))}
         </ul>
       )}
+
+      <ActionSheet
+        open={phoneActif != null}
+        onClose={() => setPhoneActif(null)}
+        title={phoneActif?.modele}
+        actions={
+          phoneActif
+            ? [
+                { label: 'Modifier', onClick: () => navigate(`/telephones/${phoneActif.id}`) },
+                ...(phoneActif.statut !== 'vendu'
+                  ? [{ label: 'Vendre', onClick: () => navigate('/nouveau/vente-telephone', { state: { phoneId: phoneActif.id } }) }]
+                  : []),
+                { label: 'Supprimer', destructive: true, onClick: () => handleSupprimer(phoneActif) },
+              ]
+            : []
+        }
+      />
     </div>
   )
 }
